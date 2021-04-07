@@ -1,6 +1,13 @@
-# LP Money Machine
+<p align="center">
+  <a href="https://github.com/montali/lp-money-machine">
+    <img src="https://user-images.githubusercontent.com/3484085/113842129-ab4e8000-9792-11eb-8555-471d6cbc3f69.png" alt="Logo" width="130" height="130">
+  </a>
+  <h1 align="center">LP Money Machine</h1>
 
-![cover](./cover.png)
+  <p align="center">
+    Stock optimizer.
+  </p>
+</p>
 
 ## Decision variables
 
