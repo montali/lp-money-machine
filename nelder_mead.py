@@ -1,5 +1,7 @@
 import numpy as np
 from enum import Enum
+import logging
+logging.getLogger('fbprophet').setLevel(logging.WARNING)
 
 
 class InitialPointShapeException(Exception):
@@ -18,7 +20,7 @@ class Operations(Enum):
 
 
 class NelderMead:
-    def __init__(self, n, fn, sum_constraint, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.5, shrinkage_parameter=0.5, max_iterations=50, shift_coefficient=0.05):
+    def __init__(self, n, fn, sum_constraint, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.5, shrinkage_parameter=0.5, max_iterations=50, shift_coefficient=0.05, verbose=False):
         self.reflection_parameter = reflection_parameter
         self.expansion_parameter = expansion_parameter
         self.contraction_parameter = contraction_parameter
@@ -29,6 +31,7 @@ class NelderMead:
         self.max_iterations = max_iterations
         self.last_performed_operation = None
         self.shift_coefficient = shift_coefficient
+        self.verbose = verbose
 
     def initialize_simplex(self, x_1=None):
         """Initializes the first simplex to begin iterations
@@ -46,7 +49,7 @@ class NelderMead:
                 raise InitialPointShapeException(
                     f"Please enter an initial point having {self.n} dimensions.")
         elif x_1 == None:  # If the user didn't provide a point
-            self.simplex_points[0] = np.random.rand(self.n)*10
+            self.simplex_points[0] = np.random.rand(self.n)
         else:  # If the user provided a point, and it is in the right shape
             self.simplex_points[0] = x_1
         # Then, we will generate all the other points
@@ -57,16 +60,15 @@ class NelderMead:
             unit_vector_i[i-1] = 1
             self.simplex_points[i] = self.simplex_points[0] + \
                 shift_coefficient_i * unit_vector_i
-        self.fix()
         print(f"Succesfully initialized simplex: {self.simplex_points}")
 
     def sort(self):
         """
         Fills self.simplex_points with the function values, then
-        returns the worst, second worst and best points.
+        returns the best, second worst and worst points.
 
         Returns: 
-            - tuple: Worst, second best and best indices of the simplex points' values
+            - tuple: Best, second worst and worst indices of the simplex points' values
         """
         # Calculate values of the function in all points of the simplex
         self.simplex_vals = np.array(
@@ -86,7 +88,7 @@ class NelderMead:
         """
         best, sec_worst, worst = self.sort()
         # Compute the centroid, excluding the worst point
-        centroid = np.mean(np.delete(self.simplex_points, worst), axis=0)
+        centroid = np.mean(np.delete(self.simplex_points, worst, 0), axis=0)
         # Transformation: reflection
         x_reflected = centroid + \
             (self.reflection_parameter * (centroid-self.simplex_points[worst]))
@@ -96,9 +98,10 @@ class NelderMead:
             # We don't want negative points
             self.simplex_points[worst] = x_reflected
             # Substitute negative values with 0
-            #self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
+            self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
             self.last_performed_operation = Operations.REFLECTION
-            print("✨ Reflected ✨")
+            if self.verbose:
+                print("✨ Reflected ✨")
             return
         # If the point we've found is better than the best, we try to expand it
         elif y_reflected < self.simplex_vals[best]:
@@ -109,14 +112,16 @@ class NelderMead:
             if y_expanded < y_reflected:
                 self.simplex_points[worst] = x_expanded
                 # Substitute negative values with 0
-                #self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
-                print("✨ Tried expansion and it worked! ✨")
+                self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
+                if self.verbose:
+                    print("✨ Tried expansion and it worked! ✨")
                 self.last_performed_operation = Operations.EXPANSION
             else:
                 self.simplex_points[worst] = x_reflected
                 # Substitute negative values with 0
-                #self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
-                print("✨ Tried expansion but reflection was better ✨")
+                self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
+                if self.verbose:
+                    print("✨ Tried expansion but reflection was better ✨")
                 self.last_performed_operation = Operations.REFLECTION
             return
         # If the point we've found was worse than the second worst, we'll contract
@@ -127,9 +132,10 @@ class NelderMead:
             if y_contracted < self.simplex_vals[worst]:
                 self.simplex_points[worst] = x_contracted
                 # Substitute negative values with 0
-                #self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
+                self.simplex_points[worst][self.simplex_points[worst] < 0] = 0
                 self.last_performed_operation = Operations.CONTRACTION
-                print("✨ Contracted ✨")
+                if self.verbose:
+                    print("✨ Contracted ✨")
                 return
         # If none of the previous methods worked, we'll try our last resort: shrink contraction
         # We'll want to redefine all the simplex points except for the best one.
@@ -140,7 +146,8 @@ class NelderMead:
                 # Substitute negative values with 0
                 #self.simplex_points[i][self.simplex_points[i] < 0] = 0
         self.last_performed_operation = Operations.SHRINK
-        print("✨ Shrinked ✨")
+        if self.verbose:
+            print("✨ Shrinked ✨")
 
     def fix(self):
         """Reduces the simplex points' size to satisfy the constraint
@@ -164,7 +171,6 @@ class NelderMead:
             self.fn(self.simplex_points.transpose()))
         std_dev = np.std(self.simplex_vals)
         i = 0
-        print(std_dev)
         while std_dev > target_stddev and i < self.max_iterations:
             self.iterate()
             std_dev = np.std(self.simplex_vals)
@@ -178,8 +184,6 @@ class NelderMead:
 
 if __name__ == '__main__':
     def fn(x): return ((x[0]+2*x[1]-7)**2 + (2*x[0]+x[1]-5)**2)
-    def fn2(x): return (x[0]**2 + x[1]**2 + 4*x[3]**2 - x[4]**2 - x[5]**4)
-    nm = NelderMead(6, fn2, 1, reflection_parameter=4, expansion_parameter=4,
-                    contraction_parameter=0.05, shrinkage_parameter=0.05)
+    nm = NelderMead(3, fn, 1)
     nm.initialize_simplex()
     print(nm.fit(0.00001))
