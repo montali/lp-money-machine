@@ -16,18 +16,18 @@ class StockOptimizator:
             api_key (string): AlphaVantage API key
         """
         tprint("lp-money-machine")
-        spinner = Halo(
-            text="Downloading stocks data from AlphaVantage...", spinner="moon")
-        spinner.start()
         ts = TimeSeries(key=api_key, output_format='pandas',
                         indexing_type='integer')  # PFW4J214A8S34EZB
         # If the user didn't provide investment horizon and symbols, ask for 'em
-        if investment_horizon_days != None and symbols != None:
+        if investment_horizon_days == None or symbols == None:
+            self.initialize_parameters()
+        else:
             self.investment_horizon_days = investment_horizon_days
             self.symbols = symbols
-        else:
-            self.initialize_parameters
         # Now, we fill up stocks_data with actual data
+        spinner = Halo(
+            text="Downloading stocks data from AlphaVantage...", spinner="moon")
+        spinner.start()
         self.stocks_data = {}
         for symbol in self.symbols:
             self.stocks_data[symbol] = ts.get_intraday(
@@ -40,10 +40,18 @@ class StockOptimizator:
         """Initializes the investment horizon and symbols
         """
         self.investment_horizon_days = input(
-            "Please, insert an investment horizon in days: ")
+            "Please, insert an investment horizon in days [ENTER for 30]: ")
+        if self.investment_horizon_days == "":
+            self.investment_horizon_days = 30
+        else:
+            self.investment_horizon_days = int(self.investment_horizon_days)
         symbols_string = input(
-            "Please insert a comma-separated list of stock symbols: ")
-        self.symbols = symbols_string.split(',')
+            "Please insert a comma-separated list of max. 5 stock symbols [ENTER for default one]: ")
+        if symbols_string == "":
+            self.symbols = ["AAPL", "MSFT", "GOOGL"]
+        else:
+            symbols_string.strip()
+            self.symbols = symbols_string.split(',')
 
     class suppress_stdout_stderr(object):
         '''
@@ -164,7 +172,6 @@ class StockOptimizator:
 
 
 if __name__ == "__main__":
-    op = StockOptimizator("PFW4J214A8S34EZB", 20, [
-                          "AAPL", "MSFT", "GOOGL"])
+    op = StockOptimizator("PFW4J214A8S34EZB", 20, )
     op.analyse_stocks()
     op.optimize()
