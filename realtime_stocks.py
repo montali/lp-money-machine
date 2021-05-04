@@ -4,6 +4,7 @@ from prophet import Prophet
 from art import *
 from halo import Halo
 import os
+import time
 from nelder_mead import NelderMead
 from alpha_vantage.timeseries import TimeSeries
 
@@ -29,9 +30,15 @@ class StockOptimizator:
             text="Downloading stocks data from AlphaVantage...", spinner="moon")
         spinner.start()
         self.stocks_data = {}
+        i = 0
         for symbol in self.symbols:
-            self.stocks_data[symbol] = ts.get_intraday(
-                symbol=symbol, interval='60min', outputsize='full')
+            self.stocks_data[symbol] = ts.get_daily(
+                symbol=symbol, outputsize='full')
+            i += 1
+            if i % 4 == 0:
+                print("Downloaded 5 stocks, sleeping for 60sec")
+                time.sleep(60)
+
         self.stocks_analysis = pd.DataFrame(columns=[
             "Name", "PredictionsFromDate", "PredictionsToDate", "OpenPrice", "Risk", "Prediction"])
         spinner.stop()
