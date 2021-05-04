@@ -131,11 +131,11 @@ class StockOptimizator:
         spinner.start()
         for symbol, result in self.stocks_data.items():
             data, info = result
-            open_date = data["index"].iloc[0]
+            close_date = data["index"].iloc[0]
             try:
-                close_date = data["index"].iloc[-1]
+                open_date = data["index"].iloc[365]
                 # We take the closing price of yesterday as buying price
-                open_price = data["4. close"].iloc[-1]
+                open_price = data["4. close"].iloc[0]
                 prediction, risk = self.predict_stock_return(self.create_prophet_dataframe(
                     data[["index", "4. close"]]), self.investment_horizon_days)
                 self.stocks_analysis = self.stocks_analysis.append({
@@ -173,9 +173,13 @@ class StockOptimizator:
         self.nm.initialize_simplex()
         results = self.nm.fit(0.0001)  # Stop when std_dev is 0.0001
         print("Optimization completed!")
+        money = 0
         for i in range(len(self.symbols)):
             print(
                 f"The stock {self.symbols[i]} should be {round(results[i]*100,2)}% of your portfolio")
+            money += ((1000*results[i])/(self.stocks_analysis["OpenPrice"].iloc[i])
+                      * self.stocks_analysis["Prediction"].iloc[i])
+        print(f"The predicted return for a 1000$ investment is {money}")
 
 
 if __name__ == "__main__":
