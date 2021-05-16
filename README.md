@@ -3,25 +3,83 @@
     <img src="https://user-images.githubusercontent.com/3484085/113842129-ab4e8000-9792-11eb-8555-471d6cbc3f69.png" alt="Logo" width="130" height="130">
   </a>
   <h1 align="center">LP Money Machine</h1>
-
   <p align="center">
-    Stock optimizer.
+    Stock portfolio optimizer.
   </p>
+
 </p>
 
-## Decision variables
+This project shows the application of a **Nelder-Mead optimization algorithm** to the well-known stock portfolio optimization problem. The original Nelder-Mead procedure has been enhanced to cope with the only portfolio constraint: stocks have to sum up to 100%. 
 
-First of all, we'll have to state the decision variables: a good choice would probably be considering a stock symbol as a decision variable, e.g. AAPL=1 meaning buying 1$ worth of Apple stocks. We wouldn't though be considering an important aspect: the **time dimension**. We all know that stocks are strictly time-related. A baseline approach to this is obviously considering our portfolio to be static, i.e. that we can't sell/buy except from day 0 and day -1 (i.e. the last day in *pythonic jargon*).
+<p align="center">
+    <img src="screencap.gif" alt="Logo" width="100%">
+</p>
 
-A further improvement in this approach would be considering as decision variables something like *Stock in my portfolio at day X*, like AAPL5=1 would state that we have 1$ worth of Apple stocks, in day 5. This would obviously scale our problem's size to a much, much more complex one. 
+## Stock risk and prediction
 
-## Data
+What we'd like to have is a prediction of what a good investment would be. For an investment to be *good*, we'd like it to be **profitable** and **safe** (kinda), so we'll want to minimize risk, while maximizing profit. A simple objective function would therefore be:
+$$
+\textrm{Maximize }\sum_{i=0}^{N}\frac{\textrm{return}_i}{\textrm{risk}_i}
+$$
+or better, since the created Nelder-Mead optimization is a **minimization** technique:
+$$
+\textrm{Minimize }\sum_{i=0}^{N}-\frac{\textrm{return}_i}{\textrm{risk}_i}
+$$
 
-We'll initially want to consider a daily average of stocks, to avoid getting lots of similar/useless data. Another smart idea would probably be only keeping track of the most interesting stocks, and avoiding downloading data for stocks we're not interested in. The [S&P 500](https://en.wikipedia.org/wiki/List_of_S%26P_500_companies) is probably a good choice.
+## Nelder-Mead
 
-Choosing a kinda known index is a good choice for lots of reasons, the first being that we can find [ready-to-use datasets](https://www.kaggle.com/camnugent/sandp500) of the history of prices. This makes the data retrieval part of the job painless. In the future, I'd like to implement something that automatically gathers data for a given company, maybe using [iex cloud](https://iexcloud.io/core-data/) or a Python scraper.
+**Nelder-Mead** is an iterative simplex optimization method, which works through for operations: **reflection**, **expansion**, **contraction**, **shrinkage**. These are usually tried in this order. Basically, what they do is the following:
 
-## Constraints
+- **Reflection**: tries moving the simplex away from the sub-optimal area, by computing the reflected point through the centroid of the other points, excluding the worst one;
+- **Expansion**: if reflection generated a point which is better than the current best, the point is moved along the same direction for a bit further;
+- **Contraction**: if, on the contrary, the reflected point did not improve the result, we'll want to *contract* the simplex towards the best point;
+- **Shrinkage**: if none of the previous did work, we'll want to re-calculate all the points except for the best one, computing them through the best one's coordinates.
 
-Every problem comes with some constraints. The first, obvious constraint is that we want to **respect our budget**, let's say 1000\$. Someone may that our variables should always be positive (*you can't sell something that you haven't bought*), but fortunately we live in an era in which [options](https://www.nerdwallet.com/article/investing/options-vs-stocks) are available. The difference in stocks vs. options is that, in the latter, we are not effectively buying a stock, we're just *betting on the stock's direction*. Nowadays, most of the beginner investors start with CFDs, i.e. *Contracts for Difference*, which are somewhat similar to options. The crucial point of this differentiation with stocks is one: **we're now able to place puts and calls**, similar to **sell** and **buy** positions, although **we can bet on the price drop**, i.e. we can sell without buying. This eliminates the $\ge0$ constraint for our variables.
+### Simplex initialization
 
+Several solutions have been proposed to create the initial simplex. This implementation uses a popular one (used in the MATLAB implementation too): after selecting the initial point (randomly), the others are created using the *i-th* dimension unit vector $u_i$:
+$$
+x_{(i+1)}=x_{1}+h\left(x_{1}, i\right) * u_{i}
+$$
+where $h$ is a **shift coefficient** equal to $0.05$ if the coefficient of $u_i$ in the definition of $x_1$ is non-zero, $0.025$ otherwise.
+
+### Constraints
+
+Nelder-Mead is an **unconstrained method**. To cope with the portfolio constraint, I introduced a ***fixing* function** that rescales the results to a percentage.
+
+### Termination
+
+The termination is decided basing on the **standard deviation** of the values of the points, and a **maximum number of iterations**. 
+
+### Hyperparameters
+
+Hyperparameter tuning and a little bit of research led to the following parameters:
+
+- $\textrm{reflection}_\textrm{param}=1$
+- $\textrm{expansion}_\textrm{param}=2$
+- $\textrm{shrinkage}_\textrm{param}=0.5$
+- $\textrm{max}_\textrm{iter}=50$
+- $\textrm{shift}_\textrm{coeff}=0.05$
+- $\sigma=0.00001$
+
+## Stock data retrieval and predictions
+
+Stock data are retrieved from **AlphaVantage**, a free API that provides real-time stock data. 
+
+Timeseries prediction has been added to work on predicted data and not historical data only, using a **Temporal Convolutional Network** implemented in [**Darts**](https://github.com/unit8co/darts).
+
+## How to use me
+
+First, install the requirements through pip:
+
+```bash
+$> pip install -r requirements.txt
+```
+
+Then, add your API secret to the code of `realtime_stocks.py` and run it:
+
+```bash
+$> python realtime_stocks.py
+```
+
+That's it!
