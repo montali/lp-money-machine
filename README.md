@@ -24,7 +24,8 @@ What we'd like to have is a prediction of what a good investment would be. For a
 $$ -->
 
 <div align="center"><img style="background: white;" src="https://render.githubusercontent.com/render/math?math=%5Ctextrm%7BMaximize%20%7D%5Csum_%7Bi%3D0%7D%5E%7BN%7D%5Cfrac%7B%5Ctextrm%7Breturn%7D_i%7D%7B%5Ctextrm%7Brisk%7D_i%7D"></div>
-or better, since the created Nelder-Mead optimization is a **minimization** technique:
+or better, since the created Nelder-Mead optimization is a minimization technique:
+
 <!-- $$
 \textrm{Minimize }\sum_{i=0}^{N}-\frac{\textrm{return}_i}{\textrm{risk}_i}
 $$ -->
@@ -49,7 +50,7 @@ x_{(i+1)}=x_{1}+h\left(x_{1}, i\right) * u_{i}
 $$ -->
 
 <div align="center"><img style="background: white;" src="https://render.githubusercontent.com/render/math?math=x_%7B(i%2B1)%7D%3Dx_%7B1%7D%2Bh%5Cleft(x_%7B1%7D%2C%20i%5Cright)%20*%20u_%7Bi%7D"></div>
-where <!-- $h$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=h"> is a **shift coefficient** equal to <!-- $0.05$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=0.05"> if the coefficient of <!-- $u_i$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=u_i"> in the definition of <!-- $x_1$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=x_1"> is non-zero, <!-- $0.025$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=0.025"> otherwise.
+where <!-- $h$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=h"> is a shift coefficient equal to <!-- $0.05$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=0.05"> if the coefficient of <!-- $u_i$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=u_i"> in the definition of <!-- $x_1$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=x_1"> is non-zero, <!-- $0.025$ --> <img style="transform: translateY(0.1em); background: white;" src="https://render.githubusercontent.com/render/math?math=0.025"> otherwise.
 
 ### Constraints
 
