@@ -1,15 +1,8 @@
 import pandas as pd
 import numpy as np
-from prophet import Prophet
-from art import *
-from halo import Halo
 import os
 import time
 from nelder_mead import NelderMead
-from alpha_vantage.timeseries import TimeSeries
-from darts.models import TCNModel
-from darts import TimeSeries as DartsTS
-from darts.utils.missing_values import fill_missing_values
 
 
 class StockOptimizator:
@@ -19,9 +12,6 @@ class StockOptimizator:
         Args:
             api_key (string): AlphaVantage API key
         """
-        tprint("lp-money-machine")
-        ts = TimeSeries(key=api_key, output_format='pandas',
-                        indexing_type='integer')  # ***REMOVED***
         # If the user didn't provide investment horizon and symbols, ask for 'em
         if investment_horizon_days == None or symbols == None:
             self.initialize_parameters()
@@ -31,35 +21,19 @@ class StockOptimizator:
         # Now, we fill up stocks_data with actual data
         self.stocks_analysis = pd.DataFrame(columns=[
             "Name", "PredictionsFromDate", "PredictionsToDate", "OpenPrice", "Risk", "Prediction"])
-        if historical_data is None:
-            spinner = Halo(
-                text="Downloading stocks data from AlphaVantage...", spinner="moon")
-            spinner.start()
-            self.stocks_data = {}
-            i = 0
-            for symbol in self.symbols:
-                self.stocks_data[symbol] = ts.get_daily(
-                    symbol=symbol, outputsize='full')
-                i += 1
-                if i % 5 == 0:
-                    print("Downloaded 5 stocks, sleeping for 60sec")
-                    time.sleep(60)
-        else:
-            historical_data = historical_data.dropna()
-            self.historical_data = historical_data
-            self.stocks_data = {}
-            for symbol in self.symbols:
-                try:
-                    self.stocks_data[symbol] = historical_data[historical_data.Name == symbol]
-                    self.stocks_data[symbol] = self.stocks_data[symbol].rename(
-                        columns={'close': '4.close', 'date': 'index'})  # Renaming to keep compliance with AlphaVantage
-                    self.stocks_data[symbol] = self.stocks_data[symbol][[
-                        'index', '4.close']]  # Only keeping the columns we need
-                except IndexError:
-                    print(
-                        f"Index {symbol} doesn't have sufficient historical data for the provided horizon, it will be skipped")
-
-        spinner.stop()
+        historical_data = historical_data.dropna()
+        self.historical_data = historical_data
+        self.stocks_data = {}
+        for symbol in self.symbols:
+            try:
+                self.stocks_data[symbol] = historical_data[historical_data.Name == symbol]
+                self.stocks_data[symbol] = self.stocks_data[symbol].rename(
+                    columns={'close': '4. close', 'date': 'index'})  # Renaming to keep compliance with AlphaVantage
+                self.stocks_data[symbol] = self.stocks_data[symbol][[
+                    'index', '4. close']]  # Only keeping the columns we need
+            except IndexError:
+                print(
+                    f"Index {symbol} doesn't have sufficient historical data for the provided horizon, it will be skipped")
 
     def initialize_parameters(self):
         """Initializes the investment horizon and symbols
@@ -77,38 +51,6 @@ class StockOptimizator:
         else:
             symbols_string.strip()
             self.symbols = symbols_string.split(',')
-
-    class suppress_stdout_stderr(object):
-        '''
-        Used to suppress the really long Prophet output, which we don't need.
-
-        A context manager for doing a "deep suppression" of stdout and stderr in
-        Python, i.e. will suppress all print, even if the print originates in a
-        compiled C/Fortran sub-function.
-        This will not suppress raised exceptions, since exceptions are printed
-        to stderr just before a script exits, and after the context manager has
-        exited (at least, I think that is why it lets exceptions through).
-
-        '''
-
-        def __init__(self):
-            # Open a pair of null files
-            self.null_fds = [os.open(os.devnull, os.O_RDWR) for x in range(2)]
-            # Save the actual stdout (1) and stderr (2) file descriptors.
-            self.save_fds = [os.dup(1), os.dup(2)]
-
-        def __enter__(self):
-            # Assign the null pointers to stdout and stderr.
-            os.dup2(self.null_fds[0], 1)
-            os.dup2(self.null_fds[1], 2)
-
-        def __exit__(self, *_):
-            # Re-assign the real stdout/stderr back to (1) and (2)
-            os.dup2(self.save_fds[0], 1)
-            os.dup2(self.save_fds[1], 2)
-            # Close the null files
-            for fd in self.null_fds + self.save_fds:
-                os.close(fd)
 
     def create_prophet_dataframe(self, data):
         """Creates a Prophet-compatible dataframe. Needed because Prophet expects data in a given shape
@@ -134,35 +76,15 @@ class StockOptimizator:
         Returns:
             tuple: Return forecast, risk forecast
         """
-        series = DartsTS.from_dataframe(
-            data.head(1000), 'index', "4. close", freq="B")
-        model_tcn = TCNModel(
-            input_chunk_length=50,
-            output_chunk_length=30,
-            n_epochs=400,
-            dropout=0.1,
-            dilation_base=2,
-            weight_norm=True,
-            kernel_size=5,
-            num_filters=3,
-            random_state=0
-        )
-        model_tcn.fit(fill_missing_values(series))
-        prediction_aarima = model_tcn.predict(days_from_now)
         risk = abs(
-            np.std(prediction_aarima.values()))
-        return prediction_aarima.values()[-1][0], risk
+            np.std(data["4. close"]))
+        return data["4. close"].tail(1), risk
 
     def analyse_stocks(self):
-        spinner = Halo(
-            text="Analysing the timeseries through Profet", spinner="moon")
-        spinner.start()
-        for symbol, result in self.stocks_data.items():
-            data, info = result
-            close_date = data["index"].iloc[0]
+        for symbol, data in self.stocks_data.items():
+            close_date = data["index"].iloc[-1]
             try:
-                open_date = data["index"].iloc[365]
-                # We take the closing price of yesterday as buying price
+                open_date = data["index"].iloc[0]
                 open_price = data["4. close"].iloc[0]
                 prediction, risk = self.predict_stock_return(
                     data, self.investment_horizon_days)
@@ -180,9 +102,9 @@ class StockOptimizator:
         # We now add the ror column, containing predicted return over risk
         self.stocks_analysis["ror"] = (self.stocks_analysis["Prediction"] -
                                        self.stocks_analysis["OpenPrice"])/self.stocks_analysis["Risk"]
+        print(self.stocks_analysis.columns)
+
         self.stocks_analysis.sort_values("ror", ascending=False)
-        print(self.stocks_analysis)
-        spinner.stop()
 
     def objective_function(self, portfolio):
         """The objective function to be optimized
@@ -212,6 +134,8 @@ class StockOptimizator:
 
 
 if __name__ == "__main__":
-    op = StockOptimizator("***REMOVED***", investment_horizon_days=20)
+    historical_data = pd.read_csv('all_stocks_5yr.csv')
+    op = StockOptimizator(
+        "***REMOVED***", investment_horizon_days=20, historical_data=historical_data)
     op.analyse_stocks()
     op.optimize()
