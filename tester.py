@@ -7,6 +7,9 @@ import os
 import time
 from nelder_mead import NelderMead
 from alpha_vantage.timeseries import TimeSeries
+from darts.models import TCNModel
+from darts import TimeSeries as DartsTS
+from darts.utils.missing_values import fill_missing_values
 
 
 class StockOptimizator:
@@ -40,7 +43,7 @@ class StockOptimizator:
             self.stocks_data[symbol][0].drop(
                 self.stocks_data[symbol][0].head(self.investment_horizon_days).index, inplace=True)
             i += 1
-            if i % 4 == 0:
+            if i % 5 == 0:
                 print("Downloaded 5 stocks, sleeping for 60sec")
                 time.sleep(60)
         self.stocks_analysis = pd.DataFrame(columns=[
@@ -110,7 +113,7 @@ class StockOptimizator:
         prophet_df["y"] = data["4. close"]
         return prophet_df
 
-    def predict_stock_return(self, close_prices, days_from_now):
+    def predict_stock_return(self, data, days_from_now):
         """Predicts the return and risk over the investment horizon
 
         Args:
@@ -120,14 +123,24 @@ class StockOptimizator:
         Returns:
             tuple: Return forecast, risk forecast
         """
-        estimator = Prophet()
-        with self.suppress_stdout_stderr():
-            estimator.fit(close_prices)
-        future = estimator.make_future_dataframe(periods=days_from_now)
-        forecast = estimator.predict(future, )
+        series = DartsTS.from_dataframe(
+            data.head(1000), 'index', "4. close", freq="B")
+        model_tcn = TCNModel(
+            input_chunk_length=50,
+            output_chunk_length=30,
+            n_epochs=400,
+            dropout=0.1,
+            dilation_base=2,
+            weight_norm=True,
+            kernel_size=5,
+            num_filters=3,
+            random_state=0
+        )
+        model_tcn.fit(fill_missing_values(series))
+        prediction_aarima = model_tcn.predict(days_from_now)
         risk = abs(
-            np.std(forecast["yhat"].iloc[-self.investment_horizon_days:]))
-        return forecast["yhat"].iloc[-1], risk
+            np.std(prediction_aarima.values()))
+        return prediction_aarima.values()[-1][0], risk
 
     def analyse_stocks(self):
         spinner = Halo(
@@ -140,8 +153,8 @@ class StockOptimizator:
                 close_date = data["index"].iloc[-1]
                 # We take the closing price of yesterday as buying price
                 open_price = data["4. close"].iloc[-1]
-                prediction, risk = self.predict_stock_return(self.create_prophet_dataframe(
-                    data[["index", "4. close"]]), self.investment_horizon_days)
+                prediction, risk = self.predict_stock_return(
+                    data, self.investment_horizon_days)
                 self.stocks_analysis = self.stocks_analysis.append({
                     "Name": symbol,
                     "PredictionsFromDate": open_date,
