@@ -106,7 +106,7 @@ class StockOptimizator:
             sum += self.stocks_analysis.iloc[i]["ror"] * portfolio[i]
         return -sum
 
-    def optimize(self, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.1, shrinkage_parameter=0.5, max_iterations=15, shift_coefficient=0.05):
+    def optimize(self, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.1, shrinkage_parameter=0.5, max_iterations=25, shift_coefficient=0.05):
         print("Starting optimization...")
         self.nm = NelderMead(len(self.symbols), self.objective_function, 1, reflection_parameter, expansion_parameter,
                              contraction_parameter, shrinkage_parameter, max_iterations, shift_coefficient)
