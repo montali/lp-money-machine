@@ -91,4 +91,11 @@ Then, add your API secret to the code of `realtime_stocks.py` and run it:
 $> python realtime_stocks.py
 ```
 
+Different scripts are available:
+
+- `numpy-only.py` is the purest version: it uses the historical data contained in `all_stocks_5yr.csv` to create a portfolio;
+- `realtime_stocks.py` is instead able to work on real data: it downloads the history of stocks values from AlphaVantage, then analyzes them through Darts and outputs an optimal portfolio;
+- `nelder_mead.py` is where the optimization is done: it provides an implementation of the Nelder-Mead iterative optimization technique, using a simplex;
+- `tester.py` provides a backtesting script that is able to test the techniques found in `realtimes_stocks.py` to actually see if they work.
+
 That's it!
