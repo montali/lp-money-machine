@@ -119,7 +119,8 @@ class StockOptimizator:
                 f"The stock {self.symbols[i]} should be {round(results[i]*100,2)}% of your portfolio")
             money += ((1000*results[i])/(self.stocks_analysis["OpenPrice"].iloc[i])
                       * self.stocks_analysis["Prediction"].iloc[i])
-        print(f"The predicted return for a 1000$ investment is {money}")
+        print(
+            f"The predicted return for a 1000$ investment is {round(money, 2)}$")
 
 
 if __name__ == "__main__":
