@@ -13,7 +13,7 @@ from darts.utils.missing_values import fill_missing_values
 
 
 class StockOptimizator:
-    def __init__(self, api_key, investment_horizon_days=None, symbols=None):
+    def __init__(self, api_key, historical_data=None, investment_horizon_days=None, symbols=None):
         """Initializes the StockOptimizator object
 
         Args:
@@ -29,21 +29,36 @@ class StockOptimizator:
             self.investment_horizon_days = investment_horizon_days
             self.symbols = symbols
         # Now, we fill up stocks_data with actual data
-        spinner = Halo(
-            text="Downloading stocks data from AlphaVantage...", spinner="moon")
-        spinner.start()
-        self.stocks_data = {}
-        i = 0
-        for symbol in self.symbols:
-            self.stocks_data[symbol] = ts.get_daily(
-                symbol=symbol, outputsize='full')
-            i += 1
-            if i % 5 == 0:
-                print("Downloaded 5 stocks, sleeping for 60sec")
-                time.sleep(60)
-
         self.stocks_analysis = pd.DataFrame(columns=[
             "Name", "PredictionsFromDate", "PredictionsToDate", "OpenPrice", "Risk", "Prediction"])
+        if historical_data is None:
+            spinner = Halo(
+                text="Downloading stocks data from AlphaVantage...", spinner="moon")
+            spinner.start()
+            self.stocks_data = {}
+            i = 0
+            for symbol in self.symbols:
+                self.stocks_data[symbol] = ts.get_daily(
+                    symbol=symbol, outputsize='full')
+                i += 1
+                if i % 5 == 0:
+                    print("Downloaded 5 stocks, sleeping for 60sec")
+                    time.sleep(60)
+        else:
+            historical_data = historical_data.dropna()
+            self.historical_data = historical_data
+            self.stocks_data = {}
+            for symbol in self.symbols:
+                try:
+                    self.stocks_data[symbol] = historical_data[historical_data.Name == symbol]
+                    self.stocks_data[symbol] = self.stocks_data[symbol].rename(
+                        columns={'close': '4.close', 'date': 'index'})  # Renaming to keep compliance with AlphaVantage
+                    self.stocks_data[symbol] = self.stocks_data[symbol][[
+                        'index', '4.close']]  # Only keeping the columns we need
+                except IndexError:
+                    print(
+                        f"Index {symbol} doesn't have sufficient historical data for the provided horizon, it will be skipped")
+
         spinner.stop()
 
     def initialize_parameters(self):
@@ -197,6 +212,6 @@ class StockOptimizator:
 
 
 if __name__ == "__main__":
-    op = StockOptimizator("***REMOVED***", 20, )
+    op = StockOptimizator("***REMOVED***", investment_horizon_days=20)
     op.analyse_stocks()
     op.optimize()
