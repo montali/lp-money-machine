@@ -47,7 +47,7 @@ class StockOptimizator:
         symbols_string = input(
             "Please insert a comma-separated list of max. 5 stock symbols [ENTER for default one]: ")
         if symbols_string == "":
-            self.symbols = ["AAPL", "MSFT", "GOOGL"]
+            self.symbols = ["NVDA", "MSFT", "V"]
         else:
             symbols_string.strip()
             self.symbols = symbols_string.split(',')
