@@ -1,16 +1,16 @@
 import pandas as pd
 import numpy as np
-import os
-import time
 from nelder_mead import NelderMead
 
 
 class StockOptimizator:
-    def __init__(self, api_key, historical_data=None, investment_horizon_days=None, symbols=None):
+    def __init__(self, historical_data=None, investment_horizon_days=None, symbols=None):
         """Initializes the StockOptimizator object
 
         Args:
-            api_key (string): AlphaVantage API key
+            historical_data (pd.DataFrame, optional): Historical stock data. Defaults to None.
+            investment_horizon_days (int, optional): Days of investment horizon. Defaults to None.
+            symbols (list[string], optional): Stock symbols to insert in the portfolio. Defaults to None.
         """
         # If the user didn't provide investment horizon and symbols, ask for 'em
         if investment_horizon_days == None or symbols == None:
@@ -52,22 +52,10 @@ class StockOptimizator:
             symbols_string.strip()
             self.symbols = symbols_string.split(',')
 
-    def create_prophet_dataframe(self, data):
-        """Creates a Prophet-compatible dataframe. Needed because Prophet expects data in a given shape
-
-        Args:
-            stock_data (Pandas dataframe): Historical stock data
-
-        Returns:
-            Pandas dataframe: Prophet-compatible dataframe
-        """
-        prophet_df = pd.DataFrame()
-        prophet_df["ds"] = data["index"]
-        prophet_df["y"] = data["4. close"]
-        return prophet_df
-
     def predict_stock_return(self, data, days_from_now):
-        """Predicts the return and risk over the investment horizon
+        """Predicts the return and risk over the investment horizon.
+        Should normally utilize a timeseries analysis tool, but in this numpy-pure version it just returns
+        the risk and current price.
 
         Args:
             close_prices (Pandas DataFrame): Time series containing the closing prices
@@ -78,16 +66,19 @@ class StockOptimizator:
         """
         risk = abs(
             np.std(data["4. close"]))
-        return data["4. close"].tail(1), risk
+        return data["4. close"].iloc[-1].item(), risk
 
     def analyse_stocks(self):
+        """Creates a stocks_analysis DataFrame containing the informations needed by the optimization algorithm
+        """
         for symbol, data in self.stocks_data.items():
             close_date = data["index"].iloc[-1]
             try:
-                open_date = data["index"].iloc[0]
-                open_price = data["4. close"].iloc[0]
+                open_date = data["index"].iloc[-self.investment_horizon_days]
+                open_price = data["4. close"].iloc[-self.investment_horizon_days].item()
                 prediction, risk = self.predict_stock_return(
                     data, self.investment_horizon_days)
+
                 self.stocks_analysis = self.stocks_analysis.append({
                     "Name": symbol,
                     "PredictionsFromDate": open_date,
@@ -102,8 +93,6 @@ class StockOptimizator:
         # We now add the ror column, containing predicted return over risk
         self.stocks_analysis["ror"] = (self.stocks_analysis["Prediction"] -
                                        self.stocks_analysis["OpenPrice"])/self.stocks_analysis["Risk"]
-        print(self.stocks_analysis.columns)
-
         self.stocks_analysis.sort_values("ror", ascending=False)
 
     def objective_function(self, portfolio):
@@ -135,7 +124,6 @@ class StockOptimizator:
 
 if __name__ == "__main__":
     historical_data = pd.read_csv('all_stocks_5yr.csv')
-    op = StockOptimizator(
-        "PFW4J214A8S34EZB", investment_horizon_days=20, historical_data=historical_data)
+    op = StockOptimizator(historical_data=historical_data)
     op.analyse_stocks()
     op.optimize()
