@@ -20,7 +20,22 @@ class Operations(Enum):
 
 
 class NelderMead:
-    def __init__(self, n, fn, sum_constraint, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.5, shrinkage_parameter=0.5, max_iterations=50, shift_coefficient=0.05, verbose=False):
+    def __init__(self, n, fn, sum_constraint=1, reflection_parameter=1, expansion_parameter=2, contraction_parameter=0.5, shrinkage_parameter=0.5, max_iterations=50, shift_coefficient=0.05, verbose=False, fix_result=True):
+        """Initializes the optimizer    
+
+        Args:
+            n (int): Number of variables
+            fn (function): Objective function to minimize
+            sum_constraint (float): The desired sum of the simplex points
+            reflection_parameter (float, optional): Reflection coefficient. Defaults to 1.
+            expansion_parameter (float, optional): Expansion coefficient. Defaults to 2.
+            contraction_parameter (float, optional): Contraction coefficient. Defaults to 0.5.
+            shrinkage_parameter (float, optional): Shrinkage coefficient. Defaults to 0.5.
+            max_iterations (int, optional): Limit of iterations in optimization. Defaults to 50.
+            shift_coefficient (float, optional): Coefficient of shift in the initial points. Defaults to 0.05.
+            verbose (bool, optional): If True, the algorithm outputs the steps while they are made. Defaults to False.
+            fix_result (bool, optional): Fixes the result to the sum constraint. Defaults to True.
+        """
         self.reflection_parameter = reflection_parameter
         self.expansion_parameter = expansion_parameter
         self.contraction_parameter = contraction_parameter
@@ -32,6 +47,7 @@ class NelderMead:
         self.last_performed_operation = None
         self.shift_coefficient = shift_coefficient
         self.verbose = verbose
+        self.fix_result = fix_result
 
     def initialize_simplex(self, x_1=None):
         """Initializes the first simplex to begin iterations
@@ -177,13 +193,18 @@ class NelderMead:
             print(
                 f"🚀 Performing iteration {i}\t🥴 Standard deviation={round(std_dev, 2)}\t🏅 Value={round(self.min, 3)}")
             i += 1
-        self.fix()
+        if self.fix_result:
+            self.fix()
         best, _, _ = self.sort()
         return self.simplex_points[best]
 
 
 if __name__ == '__main__':
     def fn(x): return ((x[0]+2*x[1]-7)**2 + (2*x[0]+x[1]-5)**2)
-    nm = NelderMead(3, fn, 1)
+    nm = NelderMead(2, fn, fix_result=False)
     nm.initialize_simplex()
     print(nm.fit(0.00001))
+    text = "as seen on WolframAlpha."
+    link = "https://www.wolframalpha.com/input/?i=minimize+%28x_0+plus+2*x_1-7%29**2+plus++++%282*x_0+plus+x_1-5%29**2"
+    print(
+        f"The result should be (1,3), \u001b]8;;{link}\u001b\\{text}\u001b]8;;\u001b\\")
