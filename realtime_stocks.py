@@ -155,7 +155,7 @@ class StockOptimizator:
 
     def analyse_stocks(self):
         spinner = Halo(
-            text="Analysing the timeseries through Profet", spinner="moon")
+            text="Analysing the timeseries through Darts", spinner="moon")
         spinner.start()
         for symbol, result in self.stocks_data.items():
             data, info = result
