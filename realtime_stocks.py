@@ -21,7 +21,7 @@ class StockOptimizator:
         """
         tprint("lp-money-machine")
         ts = TimeSeries(key=api_key, output_format='pandas',
-                        indexing_type='integer')  # ***REMOVED***
+                        indexing_type='integer')  # 
         # If the user didn't provide investment horizon and symbols, ask for 'em
         if investment_horizon_days == None or symbols == None:
             self.initialize_parameters()
@@ -134,8 +134,9 @@ class StockOptimizator:
         Returns:
             tuple: Return forecast, risk forecast
         """
+        print(data.reset_index(drop=True, inplace=True))
         series = DartsTS.from_dataframe(
-            data.head(1000), 'index', "4. close", freq="B")
+            data, 'index', "4. close", freq="B")
         model_tcn = TCNModel(
             input_chunk_length=50,
             output_chunk_length=30,
@@ -213,6 +214,6 @@ class StockOptimizator:
 
 
 if __name__ == "__main__":
-    op = StockOptimizator("***REMOVED***", investment_horizon_days=20)
+    op = StockOptimizator("", investment_horizon_days=20)
     op.analyse_stocks()
     op.optimize()

@@ -21,7 +21,7 @@ class StockOptimizator:
         """
         tprint("lp-money-machine")
         ts = TimeSeries(key=api_key, output_format='pandas',
-                        indexing_type='integer')  # ***REMOVED***
+                        indexing_type='integer')  # 
         # If the user didn't provide investment horizon and symbols, ask for 'em
         if investment_horizon_days == None or symbols == None:
             self.initialize_parameters()
@@ -207,6 +207,6 @@ class StockOptimizator:
 
 
 if __name__ == "__main__":
-    op = StockOptimizator("***REMOVED***", 20, )
+    op = StockOptimizator("", 20, )
     op.analyse_stocks()
     op.optimize()
